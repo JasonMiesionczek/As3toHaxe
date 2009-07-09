@@ -28,7 +28,7 @@ class ClassPathScanner {
 		rootFiles = FileSystem.readDirectory(_inputPath);
 		
 		for (file in rootFiles) {
-			var fullPath:String = _inputPath + "\\" + file;
+			var fullPath:String = _inputPath + "/" + file;
 			if (FileSystem.isDirectory(fullPath)) {
 				_dirsToSearch.add(fullPath);
 			} else {
@@ -44,7 +44,7 @@ class ClassPathScanner {
 	private function scanDirectory(dir:String):Void {
 		var filesInDir:Array<String> = FileSystem.readDirectory(dir);
 		for (file in filesInDir) {
-			var fullPath:String = dir + "\\" + file;
+			var fullPath:String = dir + "/" + file;
 			if (FileSystem.isDirectory(fullPath)) {
 				scanDirectory(fullPath);
 			}
