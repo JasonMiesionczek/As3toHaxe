@@ -34,11 +34,9 @@ class FlashAPI {
 		var x : Xml = Xml.parse(inputXml).firstElement();
 		for (p in x.elements()) {
 			var pname:String = p.get("name");
-			//Lib.println(pname);
 			for (e in p.elements()) {
 				var ename:String = e.firstChild().nodeValue;
 				_shortTypes.add(ename);
-				//Lib.println("    " + ename);
 				_types.add(pname + "." + ename);
 			}
 		}

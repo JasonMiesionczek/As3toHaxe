@@ -35,7 +35,7 @@ class FileInspector {
 				if (_fileObject.eof()) break;
 				var l:String = _fileObject.readLine();
 				_lines.add(l);
-				_hf.lines.add(l);
+				_hf.lines.push(l);
 			}
 		}
 		catch (ex:Eof) {}

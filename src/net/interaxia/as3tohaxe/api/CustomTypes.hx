@@ -29,6 +29,12 @@ class CustomTypes {
 		matches.set("Array", "Array<Dynamic>");
 	}
 	
+	public function setupMatches():Void {
+		for (stype in getShortNames()) {
+			matches.set(stype, stype.charAt(0).toUpperCase() + stype.substr(1));
+		}
+	}
+	
 	public function getTypeNormalized(originalName:String):String {
 		for (t in types) {
 			if (t == originalName) {
