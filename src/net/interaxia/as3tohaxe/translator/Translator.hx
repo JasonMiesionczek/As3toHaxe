@@ -68,6 +68,19 @@ class Translator {
 			newLines.push(tempLine);
 		}
 		
+		var tempLines:Array<String> = newLines;
+		tempLines.reverse();
+		for (line in 0...tempLines.length) {
+			var temp:String = StringTools.ltrim(tempLines[line]);
+			if (StringTools.startsWith(temp, "}")) {
+				tempLines = tempLines.slice(line+1);
+				break;
+			}
+			
+		}
+		tempLines.reverse();
+		newLines = tempLines;
+		
 		// insert the new import statements just below the package definition.
 		for (imp in _hf.imports) {
 			var impStr:String = "    import " + imp + ";";

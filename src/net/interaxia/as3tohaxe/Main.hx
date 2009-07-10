@@ -22,6 +22,14 @@ class Main {
 		var inputPath:String = "";
 		var outputPath:String = "";
 		
+		if (Sys.args().length == 0) {
+			inputPath = Sys.getCwd();
+			
+		} else if (Sys.args().length == 2) {
+			inputPath = Sys.args()[0];
+			outputPath = Sys.args()[1];
+		}
+		
 		try {
 			if (!FileSystem.exists(outputPath)) {
 				FileSystem.createDirectory(outputPath);
@@ -31,13 +39,7 @@ class Main {
 			return;
 		}
 		
-		if (Sys.args().length == 0) {
-			inputPath = Sys.getCwd();
-			
-		} else if (Sys.args().length == 2) {
-			inputPath = Sys.args()[0];
-			outputPath = Sys.args()[1];
-		}
+		
 		
 		Lib.println("Input path: " + inputPath);
 		Lib.println("Output path: " + outputPath);
