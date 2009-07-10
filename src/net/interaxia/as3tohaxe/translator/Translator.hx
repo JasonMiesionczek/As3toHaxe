@@ -60,6 +60,7 @@ class Translator {
 			}
 			tempLine = removeImports(tempLine);
 			tempLine = convertClassName(tempLine);
+			tempLine = convertInterfaceName(tempLine);
 			tempLine = convertTypes(tempLine);
 			tempLine = convertConstructorName(tempLine);
 			tempLine = convertForLoop(tempLine);
@@ -146,6 +147,18 @@ class Translator {
 		return temp;
 	}
 	
+	private function convertInterfaceName(input:String):String {
+		var classPattern = ~/public\s+interface\s+(\w+)/;
+		var temp:String = input;
+		if (classPattern.match(input)) {
+			var className:String = classPattern.matched(1);
+			var newName:String = className.charAt(0).toUpperCase() + className.substr(1);
+			temp = StringTools.replace(temp, className, newName);
+		}
+		
+		return temp;
+	}
+	
 	private function convertPackage(input:String):String {
 		var temp:String = input;
 		
@@ -164,6 +177,7 @@ class Translator {
 		var temp:String = input;
 		var typeDefPattern = ~/var\s+\w+\s*:\s*(\w+)[;\s]*/;
 		var typeNewPattern = ~/new\s+(\w+)\(\S*\)/;
+		var funcParamPattern = ~/function\s+\w+\s*\(\w+:(\w+)\)/;
 		
 		if (typeDefPattern.match(input)) {
 			var typeToConvert:String = typeDefPattern.matched(1);
@@ -183,6 +197,14 @@ class Translator {
 			}
 		}
 		
+		if (funcParamPattern.match(input)) {
+			var typeToConvert:String = funcParamPattern.matched(1);
+			var newType:String = CustomTypes.getInstance().matches.get(typeToConvert);
+			if (newType != null) {
+				temp = StringTools.replace(input, typeToConvert, newType);
+			}
+		}
+		
 		return temp;
 	}
 	
@@ -194,6 +216,10 @@ class Translator {
 			_typeRegs.add(reg);
 			//var reg:EReg = new EReg("public\\s+class\\s+(" + stype + ")", "");
 			//_typeRegs.add(reg);
+			var reg:EReg = new EReg("\\s+implements\\s+(" + stype + ")", "");
+			_typeRegs.add(reg);
+			reg = new EReg("\\s+extends\\s+(" + stype + ")", "");
+			_typeRegs.add(reg);
 		}
 		
 		for (stype in FlashAPI.getInstance().types) {

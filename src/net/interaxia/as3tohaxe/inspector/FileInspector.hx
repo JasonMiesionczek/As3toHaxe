@@ -43,6 +43,7 @@ class FileInspector {
 		
 		detectPackage();
 		detectClasses();
+		detectInterfaces();
 		
 		return _hf;
 		
@@ -69,6 +70,17 @@ class FileInspector {
 				CustomTypes.getInstance().types.add(fullType);
 				
 				//Lib.println(fullType);
+			}
+		}
+	}
+	
+	private function detectInterfaces():Void {
+		var interfacePattern = ~/public\s+interface\s+(\w+)/;
+		for (line in _lines) {
+			if (interfacePattern.match(line)) {
+				var fullType:String = _package + "." + interfacePattern.matched(1);
+				CustomTypes.getInstance().types.add(fullType);
+				Lib.println("Interface found: " + fullType);
 			}
 		}
 	}
