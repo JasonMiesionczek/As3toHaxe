@@ -6,6 +6,7 @@ import neko.io.FileOutput;
 import neko.io.Path;
 import neko.Lib;
 import neko.Sys;
+import net.interaxia.as3tohaxe.api.AllTypes;
 import net.interaxia.as3tohaxe.api.CustomTypes;
 import net.interaxia.as3tohaxe.api.FlashAPI;
 import net.interaxia.as3tohaxe.inspector.FileInspector;
@@ -50,6 +51,8 @@ class Main {
 		
 		var haxeFiles:List<HaxeFile> = new List<HaxeFile>();
 		
+		AllTypes.getInstance().initAllTypes();
+		
 		Lib.println("Inspecting files...");
 		for (f in cpscanner.filesToParse) {
 			
@@ -60,9 +63,9 @@ class Main {
 		}
 		
 		Lib.println("Collecting type information...");
-		CustomTypes.getInstance().setupMatches();
+		//CustomTypes.getInstance().setupMatches();
 		
-		Translator.initTypeRegs();
+		//Translator.initTypeRegs();
 		
 		for (f in haxeFiles) {
 			Translator.compileTypes(f);
@@ -85,7 +88,7 @@ class Main {
 			var fileName:String = Path.withoutDirectory(Path.withoutExtension(file.fullPath));
 			
 			if (CustomTypes.getInstance().matches.exists(fileName)) {
-				var newfileName:String = CustomTypes.getInstance().matches.get(fileName);
+				var newfileName:String = AllTypes.getInstance().getTypeByOrigName(fileName, false).normalizedName;//CustomTypes.getInstance().matches.get(fileName);
 				file.fullPath = StringTools.replace(file.fullPath, fileName, newfileName);
 			}
 			var fileOutputPath:String = output;

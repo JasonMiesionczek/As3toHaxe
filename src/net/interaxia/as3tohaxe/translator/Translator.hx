@@ -11,7 +11,9 @@ import haxe.io.Eof;
 import neko.Lib;
 import net.interaxia.as3tohaxe.api.CustomTypes;
 import net.interaxia.as3tohaxe.api.FlashAPI;
+import net.interaxia.as3tohaxe.api.ObjectType;
 import net.interaxia.as3tohaxe.HaxeFile;
+import net.interaxia.as3tohaxe.api.AllTypes;
 
 class Translator {
 		
@@ -20,6 +22,7 @@ class Translator {
 	private var _output:List<String>;
 	private var _hf:HaxeFile;
 	private var _foundPackage:Bool;
+	private var _currentLine:Int;
 	
 	private static var _typeRegs:List<EReg>;
 	private static var _typeRegsFlash:List<EReg>;
@@ -50,6 +53,7 @@ class Translator {
 		var newLines:Array<String> = new Array<String>();
 		
 		for (line in 0..._lines.length) {
+			_currentLine = line;
 			var tempLine:String = _lines[line];
 			if (!_foundPackage) {
 				tempLine = convertPackage(tempLine);
@@ -61,6 +65,7 @@ class Translator {
 			tempLine = removeImports(tempLine);
 			tempLine = convertClassName(tempLine);
 			tempLine = convertInterfaceName(tempLine);
+			tempLine = convertConstToVar(tempLine);
 			tempLine = convertTypes(tempLine);
 			tempLine = convertConstructorName(tempLine);
 			tempLine = convertForLoop(tempLine);
@@ -113,10 +118,10 @@ class Translator {
 	}
 	
 	private function convertConstructorName(input:String):String {
-		var constPattern = ~/function\s+(\w+)\(\.*\)[^:]/;
+		var constPattern = ~/function\s+(\w+)\(\S*\)/;
 		if (constPattern.match(input)) {
 			var t:String = constPattern.matched(1);
-			for (stype in CustomTypes.getInstance().getShortNames()) {
+			for (stype in AllTypes.getInstance().getAllOrigNames(false)) {
 				if (t == stype) { // if this function name matches a custom type name
 					return StringTools.replace(input, t, "new");
 				}
@@ -173,89 +178,50 @@ class Translator {
 		return temp;
 	}
 	
-	private function convertTypes(input:String):String {
+	private function convertConstToVar(input:String):String {
 		var temp:String = input;
-		var typeDefPattern = ~/var\s+\w+\s*:\s*(\w+)[;\s]*/;
-		var typeNewPattern = ~/new\s+(\w+)\(\S*\)/;
-		var funcParamPattern = ~/function\s+\w+\s*\(\w+:(\w+)\)/;
+		var constPattern = ~/\s+const\s+\S+/;
 		
-		if (typeDefPattern.match(input)) {
-			var typeToConvert:String = typeDefPattern.matched(1);
-			var newType:String = CustomTypes.getInstance().matches.get(typeToConvert);
-			if (newType != null) {
-				//Lib.println(typeToConvert + " => " + newType);
-				temp = StringTools.replace(input, typeToConvert, newType);
-			}
-		}
-		
-		if (typeNewPattern.match(input)) {
-			var typeToConvert:String = typeNewPattern.matched(1);
-			var newType:String = CustomTypes.getInstance().matches.get(typeToConvert);
-			if (newType != null) {
-				//Lib.println(typeToConvert + " => " + newType);
-				temp = StringTools.replace(input, typeToConvert, newType);//typeNewPattern.replace(temp, newType);
-			}
-		}
-		
-		if (funcParamPattern.match(input)) {
-			var typeToConvert:String = funcParamPattern.matched(1);
-			var newType:String = CustomTypes.getInstance().matches.get(typeToConvert);
-			if (newType != null) {
-				temp = StringTools.replace(input, typeToConvert, newType);
-			}
+		if (constPattern.match(input)) {
+			temp = StringTools.replace(temp, "const", "var");
 		}
 		
 		return temp;
 	}
 	
-	public static function initTypeRegs():Void {
-		_typeRegs = new List<EReg>();
-		_typeRegsFlash = new List<EReg>();
-		for (stype in CustomTypes.getInstance().getShortNames()) {
-			var reg:EReg = new EReg(":\\s*(" + stype + ")", "");
-			_typeRegs.add(reg);
-			//var reg:EReg = new EReg("public\\s+class\\s+(" + stype + ")", "");
-			//_typeRegs.add(reg);
-			var reg:EReg = new EReg("\\s+implements\\s+(" + stype + ")", "");
-			_typeRegs.add(reg);
-			reg = new EReg("\\s+extends\\s+(" + stype + ")", "");
-			_typeRegs.add(reg);
-		}
+	private function convertTypes(input:String):String {
+		var temp:String = input;
 		
-		for (stype in FlashAPI.getInstance().types) {
-			var reg:EReg = new EReg(":\\s*(" + stype + ")", "");
-			_typeRegsFlash.add(reg);
-		}
-	}
-	
-	private static function checkForMatch(input:String):String {
-		for (reg in _typeRegs) {
-			if (reg.match(input)) {
-				return reg.matched(1);
+		
+		var patterns:Array<EReg> = [ ~/var\s+\w+\s*:\s*(\w+)[;\s]*/, 	// var definition pattern
+									 ~/new\s+(\w+)\(\S*\)/,				// object init pattern
+									 ~/:(\w+)/,							// function def pattern
+									 ~/function\s+\S+\(\S*\):(\S*)/,	// function return pattern
+									 ~/\W*(\w+)./];						// static function call pattern
+									
+		for (pattern in patterns) {
+			if (pattern.match(input)) {
+				var typeToConvert:String = pattern.matched(1);
+				//Lib.println(_hf.fullPath + ":" + _currentLine + ":" + typeToConvert);
+				var objType:ObjectType = AllTypes.getInstance().getTypeByOrigName(typeToConvert, true);
+				if (objType != null) {
+						var newType:String = objType.normalizedName;
+						temp = StringTools.replace(input, typeToConvert, newType);
+				}
+				
+				
 			}
 		}
 		
-		return null;
+		return temp;
 	}
-	
-	private static function checkForMatchFlash(input:String):String {
-		for (reg in _typeRegsFlash) {
-			if (reg.match(input)) {
-				return reg.matched(1);
-			}
-		}
 		
-		return null;
-	}
 	
 	private static function checkForTypes(input:String, hf:HaxeFile):Void {
-		var stype:String = checkForMatch(input);
+		/*var stype:String = checkForMatch(input);
 		
 		if (stype != null) {
-			//Lib.println(stype);
-			var out:String = addImport(CustomTypes.getInstance().getFullTypeByName(stype), hf);
-			//Lib.println(out);
-			//CustomTypes.getInstance().matches.set(stype, out.substr(out.lastIndexOf(".")+1));
+			addImport(CustomTypes.getInstance().getFullTypeByName(stype), hf);
 		}
 		
 		stype = checkForMatchFlash(input);
@@ -263,27 +229,25 @@ class Translator {
 		if (stype != null) {
 			addImport(FlashAPI.getInstance().getFullTypeByName(stype), hf);
 		}
-		
+		*/
+		for (stype in AllTypes.getInstance().getAllOrigNames(false)) {
+			//Lib.println("checking for: " + stype);
+			if (input.indexOf(stype) >= 0) {
+				addImport(AllTypes.getInstance().getTypeByOrigName(stype, false).getFullNormalizedName(), hf);
+			}
+		}
 	}
 	
-	private static function addImport(imp:String, hf:HaxeFile):String {
-		var found:Bool = false;
-		var out:String = "";
+	private static function addImport(imp:String, hf:HaxeFile):Void {
+		Lib.println("adding import: " + imp);
 		for (i in hf.imports) {
 			if (i == imp) {
-				found = true;
-				out = i;
-				break;
+				return;
 			}
 		}
 		
-		if (!found) {
-			hf.imports.add(imp);
-			out = imp;
-			//Lib.println("    import " + imp);
-		}
-		
-		return out;
+		hf.imports.add(imp);
+	
 	}
 	
 }

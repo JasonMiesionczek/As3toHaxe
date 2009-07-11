@@ -12,6 +12,7 @@ class FlashAPI {
 	private static var _instance:FlashAPI;
 	private var _types:List<String>;
 	private var _shortTypes:List<String>;
+	public var objTypes(default, null):List<ObjectType>;
 	
 	public static function getInstance():FlashAPI {
 		if (_instance == null) {
@@ -30,6 +31,7 @@ class FlashAPI {
 	private function new() {
 		_types = new List<String>();
 		_shortTypes = new List<String>();
+		objTypes = new List<ObjectType>();
 		var inputXml:String = File.getContent("FlashAPI.xml");
 		var x : Xml = Xml.parse(inputXml).firstElement();
 		for (p in x.elements()) {
@@ -38,6 +40,11 @@ class FlashAPI {
 				var ename:String = e.firstChild().nodeValue;
 				_shortTypes.add(ename);
 				_types.add(pname + "." + ename);
+				var objType:ObjectType = new ObjectType();
+				objType.typePackage = pname;
+				objType.originalName = ename;
+				objType.normalizedName = ename;
+				objTypes.add(objType);
 			}
 		}
 		

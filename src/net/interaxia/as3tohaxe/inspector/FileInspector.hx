@@ -8,7 +8,9 @@ import neko.io.FileInput;
 import neko.io.File;
 import haxe.io.Eof;
 import neko.Lib;
+import net.interaxia.as3tohaxe.api.AllTypes;
 import net.interaxia.as3tohaxe.api.CustomTypes;
+import net.interaxia.as3tohaxe.api.ObjectType;
 import net.interaxia.as3tohaxe.HaxeFile;
 
 class FileInspector {
@@ -66,10 +68,13 @@ class FileInspector {
 		var classPattern = ~/public\s+class\s+(\w+)/;
 		for (line in _lines) {
 			if (classPattern.match(line)) {
-				var fullType:String = _package + "." + classPattern.matched(1);
-				CustomTypes.getInstance().types.add(fullType);
 				
-				//Lib.println(fullType);
+				var objType:ObjectType = new ObjectType();
+				objType.typePackage = _package;
+				objType.originalName = classPattern.matched(1);
+				objType.normalizeName();
+				AllTypes.getInstance().types.add(objType);
+				
 			}
 		}
 	}
@@ -78,9 +83,13 @@ class FileInspector {
 		var interfacePattern = ~/public\s+interface\s+(\w+)/;
 		for (line in _lines) {
 			if (interfacePattern.match(line)) {
-				var fullType:String = _package + "." + interfacePattern.matched(1);
-				CustomTypes.getInstance().types.add(fullType);
-				Lib.println("Interface found: " + fullType);
+				
+				var objType:ObjectType = new ObjectType();
+				objType.typePackage = _package;
+				objType.originalName = interfacePattern.matched(1);
+				objType.normalizeName();
+				AllTypes.getInstance().types.add(objType);
+				
 			}
 		}
 	}

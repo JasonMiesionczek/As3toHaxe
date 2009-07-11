@@ -27,6 +27,7 @@ class CustomTypes {
 		matches.set("void", "Void");
 		matches.set("Number", "Float");
 		matches.set("Array", "Array<Dynamic>");
+		matches.set("Boolean", "Bool");
 	}
 	
 	public function setupMatches():Void {
