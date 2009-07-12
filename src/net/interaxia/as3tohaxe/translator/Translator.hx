@@ -9,7 +9,7 @@ import neko.io.FileInput;
 import neko.io.File;
 import haxe.io.Eof;
 import neko.Lib;
-import net.interaxia.as3tohaxe.api.CustomTypes;
+
 import net.interaxia.as3tohaxe.api.FlashAPI;
 import net.interaxia.as3tohaxe.api.ObjectType;
 import net.interaxia.as3tohaxe.HaxeFile;
@@ -26,7 +26,7 @@ class Translator {
 	
 	private static var _typeRegs:List<EReg>;
 	private static var _typeRegsFlash:List<EReg>;
-	
+	private static var _commentLines:List<Int>;
 
 	public function new(inputFile:HaxeFile) {
 		_lines = new Array<String>();
@@ -41,7 +41,43 @@ class Translator {
 	}
 	
 	public static function compileTypes(f:HaxeFile):Void {
-		for (line in f.lines) {
+		_commentLines = new List<Int>();
+		var _withinBlockComment:Bool = false;
+		for (line in 0...f.lines.length) {
+			var tempLine:String = f.lines[line];
+			
+			if (isSingleLineComment(tempLine)) {
+				//newLines.push(tempLine);
+				_commentLines.add(line);
+				Lib.println(tempLine);
+				continue;
+			}
+			
+			if (isStartOfComment(tempLine)) {
+				_withinBlockComment = true;
+				//newLines.push(tempLine);
+				_commentLines.add(line);
+				Lib.println(tempLine);
+				continue;
+			}
+			
+			if (_withinBlockComment && isEndOfComment(tempLine)) {
+				_withinBlockComment = false;
+				//newLines.push(tempLine);
+				_commentLines.add(line);
+				Lib.println(tempLine);
+				continue;
+			}
+			
+			if (_withinBlockComment) {
+				//newLines.push(tempLine);
+				_commentLines.add(line);
+				Lib.println(tempLine);
+				continue;
+			}
+		}
+		
+		for (line in 0...f.lines.length) {
 			checkForTypes(line, f); // this will build the new list of imports
 		}
 	}
@@ -50,11 +86,39 @@ class Translator {
 		//Lib.println("Translating "+_hf.fullPath+"...");
 		_foundPackage = false;
 		var packagePos:Int = -1;
+		var _withinBlockComment:Bool = false;
 		var newLines:Array<String> = new Array<String>();
 		
 		for (line in 0..._lines.length) {
 			_currentLine = line;
 			var tempLine:String = _lines[line];
+			
+			if (isSingleLineComment(tempLine)) {
+				newLines.push(tempLine);
+				Lib.println(tempLine);
+				continue;
+			}
+			
+			if (isStartOfComment(tempLine)) {
+				_withinBlockComment = true;
+				newLines.push(tempLine);
+				Lib.println(tempLine);
+				continue;
+			}
+			
+			if (_withinBlockComment && isEndOfComment(tempLine)) {
+				_withinBlockComment = false;
+				newLines.push(tempLine);
+				Lib.println(tempLine);
+				continue;
+			}
+			
+			if (_withinBlockComment) {
+				newLines.push(tempLine);
+				Lib.println(tempLine);
+				continue;
+			}
+			
 			if (!_foundPackage) {
 				tempLine = convertPackage(tempLine);
 			}
@@ -64,12 +128,13 @@ class Translator {
 			}
 			tempLine = removeImports(tempLine);
 			tempLine = convertClassName(tempLine);
+			tempLine = removePublicFromClass(tempLine);
 			tempLine = convertInterfaceName(tempLine);
 			tempLine = convertConstToVar(tempLine);
 			tempLine = convertTypes(tempLine);
 			tempLine = convertConstructorName(tempLine);
 			tempLine = convertForLoop(tempLine);
-						
+			tempLine = addSemiColon(tempLine);
 			//_lines[line] = tempLine;
 			newLines.push(tempLine);
 		}
@@ -97,6 +162,67 @@ class Translator {
 		
 		
 		
+	}
+	
+	private static function isSingleLineComment(input:String):Bool {
+		var temp:String = StringTools.ltrim(input);
+		var temp2:String = StringTools.rtrim(input);
+		if (StringTools.startsWith(temp, "//")) {
+			return true;
+		}
+		
+		if (StringTools.startsWith(temp, "/*") && StringTools.endsWith(temp2, "*/")) {
+			return true;
+		}
+		
+		return false;
+	}
+	
+	private static function isStartOfComment(input:String):Bool {
+		var temp:String = StringTools.ltrim(input);
+		if (StringTools.startsWith(temp, "/*")) {
+			return true;
+		}
+		
+		return false;
+	}
+	
+	private static function isEndOfComment(input:String):Bool {
+		var temp:String = StringTools.rtrim(input);
+		if (StringTools.endsWith(temp, "*/")) {
+			return true;
+		}
+		
+		return false;
+	}
+	
+	private function addSemiColon(input:String):String {
+		//var idx:Int = input.indexOf("//");
+		if (input.length == 0 || StringTools.trim(input) == "") return input;
+		var temp:String = input;
+		//var orig:String = input;
+		
+		//if (idx >= 0) {
+			//temp = temp.substr(0, idx - 1);
+			temp = StringTools.rtrim(temp);
+			if (!StringTools.endsWith(temp, "}") &&
+				!StringTools.endsWith(temp, "{") &&
+				!StringTools.endsWith(temp, ";") &&
+				!StringTools.endsWith(temp, "*/")) {
+				temp += ";";
+			}
+		//}
+		
+		return temp;
+	}
+	
+	private function removePublicFromClass(input:String):String {
+		var classPattern = ~/public\s+class/;
+		if (classPattern.match(input)) {
+			return StringTools.replace(input, "public ", "");
+		}
+		
+		return input;
 	}
 	
 	private function convertForLoop(input:String):String {
@@ -202,7 +328,6 @@ class Translator {
 		for (pattern in patterns) {
 			if (pattern.match(input)) {
 				var typeToConvert:String = pattern.matched(1);
-				//Lib.println(_hf.fullPath + ":" + _currentLine + ":" + typeToConvert);
 				var objType:ObjectType = AllTypes.getInstance().getTypeByOrigName(typeToConvert, true);
 				if (objType != null) {
 						var newType:String = objType.normalizedName;
@@ -217,19 +342,13 @@ class Translator {
 	}
 		
 	
-	private static function checkForTypes(input:String, hf:HaxeFile):Void {
-		/*var stype:String = checkForMatch(input);
-		
-		if (stype != null) {
-			addImport(CustomTypes.getInstance().getFullTypeByName(stype), hf);
+	private static function checkForTypes(lineNum:Int, hf:HaxeFile):Void {
+		for (lineNums in _commentLines) {
+			if (lineNums == lineNum) {
+				return;
+			}
 		}
-		
-		stype = checkForMatchFlash(input);
-		
-		if (stype != null) {
-			addImport(FlashAPI.getInstance().getFullTypeByName(stype), hf);
-		}
-		*/
+		var input:String = hf.lines[lineNum];
 		for (stype in AllTypes.getInstance().getAllOrigNames(false)) {
 			//Lib.println("checking for: " + stype);
 			if (input.indexOf(stype) >= 0) {
@@ -239,7 +358,7 @@ class Translator {
 	}
 	
 	private static function addImport(imp:String, hf:HaxeFile):Void {
-		Lib.println("adding import: " + imp);
+		//Lib.println("adding import: " + imp);
 		for (i in hf.imports) {
 			if (i == imp) {
 				return;

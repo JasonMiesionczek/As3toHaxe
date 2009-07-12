@@ -7,7 +7,6 @@ import neko.io.Path;
 import neko.Lib;
 import neko.Sys;
 import net.interaxia.as3tohaxe.api.AllTypes;
-import net.interaxia.as3tohaxe.api.CustomTypes;
 import net.interaxia.as3tohaxe.api.FlashAPI;
 import net.interaxia.as3tohaxe.inspector.FileInspector;
 import net.interaxia.as3tohaxe.translator.Translator;
@@ -87,7 +86,7 @@ class Main {
 		for (file in files) {
 			var fileName:String = Path.withoutDirectory(Path.withoutExtension(file.fullPath));
 			
-			if (CustomTypes.getInstance().matches.exists(fileName)) {
+			if (AllTypes.getInstance().getTypeByOrigName(fileName, false)!=null) {
 				var newfileName:String = AllTypes.getInstance().getTypeByOrigName(fileName, false).normalizedName;//CustomTypes.getInstance().matches.get(fileName);
 				file.fullPath = StringTools.replace(file.fullPath, fileName, newfileName);
 			}

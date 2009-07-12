@@ -9,7 +9,6 @@ import neko.io.File;
 import haxe.io.Eof;
 import neko.Lib;
 import net.interaxia.as3tohaxe.api.AllTypes;
-import net.interaxia.as3tohaxe.api.CustomTypes;
 import net.interaxia.as3tohaxe.api.ObjectType;
 import net.interaxia.as3tohaxe.HaxeFile;
 
